@@ -289,6 +289,35 @@ class ReactAgentSophisticatedDefense(BaseAgent):
             "messages": self.messages,
         }
 
+    def call_tools(self, tool_calls):
+        """执行工具调用"""
+        actions = []
+        observations = []
+        success = True
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.get('name')
+            tool_args = tool_call.get('arguments', {})
+            
+            if tool_name in self.tool_list:
+                try:
+                    tool_fn = self.tool_list[tool_name]
+                    result = tool_fn(**tool_args)
+                    actions.append(f"Called {tool_name} with args: {json.dumps(tool_args)}")
+                    observations.append(f"Result: {result}")
+                except Exception as e:
+                    error_msg = f"Error calling {tool_name}: {str(e)}"
+                    actions.append(f"Attempted to call {tool_name}")
+                    observations.append(error_msg)
+                    success = False
+            else:
+                error_msg = f"Tool {tool_name} not found"
+                actions.append(f"Attempted to call {tool_name}")
+                observations.append(error_msg)
+                success = False
+
+        return actions, observations, success
+
     def build_system_instruction(self):
         """构建系统指令"""
         raw_description = self.config.get("description", "You are a helpful assistant.")
